@@ -34,6 +34,7 @@ public class Main implements Runnable {
     private String inPath; //path in HDFS where raw data exists
     private String outPath; //output path (HDFS)
 
+
     public Main(String inPath, String outPath) {
         this.inPath = inPath;
         this.outPath = outPath;
@@ -145,7 +146,6 @@ public class Main implements Runnable {
         /**
          * join pipe by time interval
          */
-        String TIME_INTERVAL_JOINED_KEY = "timeIntervalJoinedKey";
         Fields joinedStreamFields = features.append(new Fields(TIME_INTERVAL_JOINED_KEY, IS_VALUE_INCREASED));
         CoGroup joinedPipe = new CoGroup(otherCurrenciesPipe,       //lhs
                                          new Fields(TIME_INTERVAL), //lhs key
@@ -154,7 +154,7 @@ public class Main implements Runnable {
                                          joinedStreamFields,        //output fields - since join fields can't appear using the same name twice
                                          new InnerJoin());          //don't allow missing values on either side - must have features + label on every row
 
-        Discard finalPipe = new Discard(joinedPipe, new Fields(TIME_INTERVAL_JOINED_KEY));
+        Discard finalPipe = new Discard(joinedPipe, new Fields(TIME_INTERVAL, TIME_INTERVAL_JOINED_KEY));
 
         FlowDef flowDef = FlowDef.flowDef()
                 .setName("Forex Data")
@@ -181,4 +181,5 @@ public class Main implements Runnable {
     public static final String BID_MIN = "bidMin";
     public static final String BID_MAX = "bidMax";
     public static final String BID_CLOSE = "bidClose";
+    public static final String TIME_INTERVAL_JOINED_KEY = "timeIntervalJoinedKey";
 }
