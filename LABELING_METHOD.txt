@@ -1,0 +1,14 @@
+11676 Big Data Alalytics - Assignment #1 - Data Preparation
+===========================================================
+
+Asher Cohen asherc@cs.cmu.edu
+
+Labeling Method
+---------------
+1. For each input line generate: ask_min, ask_max, ask_close, bid_min, bid_max, bid_close values.
+2. For EUR/USD lines calculate the average of the previous six values.
+3. Emit the average value twice: 
+3.a: for the current time interval:  (time_interval, time_interval, average)
+3.b: for the previous time interval: (previous_time_interval, time_interval, average)
+4. Collect the average values for each time interval - usually should be two values for each time interval, except to the first and last time intervals.
+5. for the pair of average values calculate the directionality base on the time intervals.
