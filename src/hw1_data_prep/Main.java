@@ -1,3 +1,5 @@
+package hw1_data_prep;
+
 import cascading.flow.Flow;
 import cascading.flow.FlowConnector;
 import cascading.flow.FlowDef;
@@ -21,7 +23,7 @@ import java.util.Properties;
  */
 public class Main implements Runnable {
     /**
-     * Main class of the data preparation assignment where the flow is defined
+     * hw1_data_prep.Main class of the data preparation assignment where the flow is defined
      */
 
     //currency pairs used for prediction (features are generated from these)
@@ -43,7 +45,7 @@ public class Main implements Runnable {
     public static void main(String[] args) {
  
         if(args.length != 2) {
-            System.err.println("Usage: Main <input path> <output path>");
+            System.err.println("Usage: hw1_data_prep.Main <input path> <output path>");
             System.exit(1);
         }
  
