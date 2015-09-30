@@ -25,12 +25,12 @@ public class Main implements Runnable {
     /**
      * hw1_data_prep.Main class of the data preparation assignment where the flow is defined
      */
-
     //currency pairs used for prediction (features are generated from these)
     private static final Currencies[] CURRENCIES = new Currencies[]{
-            Currencies.AUDJPY,
-            Currencies.AUDNZD,
-            Currencies.AUDUSD,
+            Currencies.EURGBP,
+            Currencies.EURJPY,
+            Currencies.GBPUSD,
+            Currencies.USDJPY
     };
  
     private String inPath; //path in HDFS where raw data exists
@@ -54,7 +54,11 @@ public class Main implements Runnable {
  
     @Override
     public void run() {
- 
+
+//        Fields features = FeaturesGeneratorBuffer.generateFieldsByCurrencies(Arrays.asList(CURRENCIES));
+//        for(Comparable feature : features) {
+//            System.out.println(feature);
+//        }
         runDataPreparationFlow();
     }
  
