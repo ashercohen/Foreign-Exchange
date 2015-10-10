@@ -101,7 +101,7 @@ public class DecisionTree implements Runnable {
         double testError = classify(tree, this.testDataSet);
 
 //        System.out.println("error(train): " + trainError);
-//        System.out.println("error(test): " + testError);
+        System.out.println("error(test): " + testError);
     }
 
     private double classify(Node tree, List<List<Double>> set) throws IOException {
