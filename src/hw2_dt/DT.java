@@ -9,9 +9,7 @@ import java.util.*;
 /**
  * Created by Asher
  */
-public class DT2 implements Runnable {
-
-    private static final Gson gson = new Gson();
+public class DT implements Runnable {
 
     private ArrayTable<Integer, Integer, Float> X;
     private List<Integer> Y;
@@ -27,7 +25,7 @@ public class DT2 implements Runnable {
     private int depth;
 
 
-    public DT2(String trainDataSet, String testDataSet) {
+    public DT(String trainDataSet, String testDataSet) {
         this.trainDataSet = trainDataSet;
         this.testDataSet = testDataSet;
         this.random = new Random(System.currentTimeMillis());
@@ -39,7 +37,7 @@ public class DT2 implements Runnable {
             System.exit(1);
         }
 
-        new Thread(new DT2(args[0], args[1])).start();
+        new Thread(new DT(args[0], args[1])).start();
     }
 
     @Override
@@ -55,8 +53,10 @@ public class DT2 implements Runnable {
             //serialized tree not exists - train
             if(tree == null) {
 
+                System.out.println("learning tree from examples...");
                 List<Integer> rowKeys = loadTrainDataSet();
-                tree = learnDecisionTree(rowKeys);
+                List<Integer> columns = getKeysAsList(this.trainWidth);
+                tree = learnDecisionTree(rowKeys, columns);
 //                tree.printTree();
                 tree.serialize(jsonTreeFileName);
                 ignoreWidth = false;
@@ -75,14 +75,14 @@ public class DT2 implements Runnable {
         System.out.println("total runtime (sec): " + (finish - start) / 1000);
     }
 
-    private Node learnDecisionTree(List<Integer> rowKeys) throws IOException {
+    public Node learnDecisionTree(List<Integer> rowKeys, List<Integer> columns) throws IOException {
 
         if(checkIdenticalLabels(rowKeys)) {
             //return node predicting the label all rows have
             return new Node(this.Y.get(rowKeys.get(0)));
         }
 
-        if(checkIdenticalRows(rowKeys)) {
+        if(checkIdenticalRows(rowKeys, columns)) {
             //return node predicting majority of labels or random if tie
             return new Node(majorityLabelVote(rowKeys));
         }
@@ -90,25 +90,26 @@ public class DT2 implements Runnable {
         //find attribute index (j) with maximum info gain together with its split value (threshold)
         double max_IG_Y_given_X = 0D;
         float threshold = 0F;
-        int attrToSplit = -1;
-        for(int j = 0; j < this.trainWidth; j++) {
+        int featureToSplit = -1;
+        for(Integer colIdx : columns) {
+//        for(int j = 0; j < this.trainWidth; j++) {
             //find info gain together with its split value t for attribute j
-            Object[] rvs = calculateInformationGainAndThreshold(j, rowKeys);
+            Object[] rvs = calculateInformationGainAndThreshold(colIdx, rowKeys);
             double IG_Y_given_X = (double)rvs[0];
             if(IG_Y_given_X >= max_IG_Y_given_X) {
                 max_IG_Y_given_X = IG_Y_given_X;
                 threshold = (float)rvs[1];
-                attrToSplit = j;
+                featureToSplit = colIdx;
             }
         }
 
-        if(attrToSplit == -1) {
+        if(featureToSplit == -1) {
             //no attribute can't discriminate between these rows - return majority vote (or random in case of tie)
             return new Node(majorityLabelVote(rowKeys));
         }
-        //split on attrToSplit using threshold
+        //split on featureToSplit using threshold
         //calc X_LO, Y_LO, X_HI, Y_HI
-        List<Integer>[] splits = splitDataSetByThreshold(rowKeys, attrToSplit, threshold);
+        List<Integer>[] splits = splitDataSetByThreshold(rowKeys, featureToSplit, threshold);
 
         /**
          * in case the threshold assigns all samples to the same group just return majority vote
@@ -121,38 +122,44 @@ public class DT2 implements Runnable {
 
         //call recursively on LO, HI
         this.depth++;
-        Node left = learnDecisionTree(splits[0]);
-        Node right = learnDecisionTree(splits[1]);
+        Node left = learnDecisionTree(splits[0], columns);
+        Node right = learnDecisionTree(splits[1], columns);
 
-        return new Node(threshold, attrToSplit, left, right);
+        return new Node(threshold, featureToSplit, left, right);
     }
 
-    private double testDecisionTree(Node tree, List<Integer> testRowKeys) {
+//    public double testDecisionTree(Node tree) {
+//        return testDecisionTree(tree, this.X.rowKeyList());
+//    }
 
-        int total = 0;
-        int errors = 0;
+    public double testDecisionTree(Node tree, List<Integer> testRowKeys) {
 
-        for(Integer rowIdx : testRowKeys) {
-            Map<Integer, Float> row = this.Xtest.row(rowIdx);
-            int expected = this.Ytest.get(rowIdx);
-            int actual = tree.classifyExample(row);
+        return tree.classifyTestDataSet(this.Xtest, this.Ytest, testRowKeys);
 
-            if(expected != actual) {
-                errors++;
-            }
-            total++;
-        }
-
-        return ((double)errors) / total;
+//        int total = 0;
+//        int errors = 0;
+//
+//        for(Integer rowIdx : testRowKeys) {
+//            Map<Integer, Float> row = this.Xtest.row(rowIdx);
+//            int expected = this.Ytest.get(rowIdx);
+//            int actual = tree.classifyExample(row);
+//
+//            if(expected != actual) {
+//                errors++;
+//            }
+//            total++;
+//        }
+//
+//        return ((double)errors) / total;
     }
 
-    private List<Integer>[] splitDataSetByThreshold(List<Integer> rowKeys, int attrToSplit, float threshold) {
+    private List<Integer>[] splitDataSetByThreshold(List<Integer> rowKeys, int featureToSplit, float threshold) {
         List<Integer> xLo = new ArrayList<>();
         List<Integer> xHi = new ArrayList<>();
 
 
         for(Integer row : rowKeys) {
-            Float cell = this.X.at(row, attrToSplit);
+            Float cell = this.X.at(row, featureToSplit);
             if(cell == null) {
                 //coin flip
                 if(this.random.nextBoolean()) {
@@ -302,17 +309,17 @@ public class DT2 implements Runnable {
 
     private boolean checkIdenticalLabels(List<Integer> rowKeys) {
 
-        int length = rowKeys.size();
-        if(length == 0) {
-            throw new RuntimeException("length = 0"); //shouldn't get here
+        int rowsCount = rowKeys.size();
+        if(rowsCount == 0) {
+            throw new RuntimeException("rowsCount = 0"); //shouldn't get here
         }
-        if(length == 1) {
+        if(rowsCount == 1) {
             return true;
         }
 
         int firstLabel = this.Y.get(rowKeys.get(0));
 
-        for(int i = 1; i < length; i++) {
+        for(int i = 1; i < rowsCount; i++) {
             if(firstLabel != this.Y.get(rowKeys.get(i))) {
                 return false;
             }
@@ -320,7 +327,7 @@ public class DT2 implements Runnable {
         return true;
     }
 
-    private boolean checkIdenticalRows(List<Integer> rowKeys) {
+    private boolean checkIdenticalRows(List<Integer> rowKeys, List<Integer> columns) {
 
         int numRows = rowKeys.size();
         if(numRows == 0) {
@@ -331,7 +338,7 @@ public class DT2 implements Runnable {
         }
         if(numRows < 1000) {
             for(int i = 1; i < numRows; i++) {
-                if(!isIdenticalRows(rowKeys.get(i-1), rowKeys.get(i))) {
+                if(!isIdenticalRows(rowKeys.get(i-1), rowKeys.get(i), columns)) {
                     return false;
                 }
             }
@@ -365,14 +372,15 @@ public class DT2 implements Runnable {
         return this.random.nextBoolean() ? 1 : 0;
     }
 
-    private boolean isIdenticalRows(Integer rowIndex1, Integer rowIndex2) {
+    private boolean isIdenticalRows(Integer rowIndex1, Integer rowIndex2, List<Integer> columns) {
 
         Map<Integer, Float> row1 = this.X.row(rowIndex1);
         Map<Integer, Float> row2 = this.X.row(rowIndex2);
 
-        for(int i = 0; i < this.trainWidth; i++) {
-            Float v1 = row1.get(i);
-            Float v2 = row2.get(i);
+        for(Integer colIdx : columns) {
+//        for(int i = 0; i < this.trainWidth; i++) {
+            Float v1 = row1.get(colIdx);
+            Float v2 = row2.get(colIdx);
 
             if(v1 == null && v2 == null) {
                 continue;
@@ -384,7 +392,7 @@ public class DT2 implements Runnable {
         return true;
     }
 
-    private List<Integer> loadTrainDataSet() throws IOException {
+    public List<Integer> loadTrainDataSet() throws IOException {
 
         int[] widthAndHeight = getWidthAndHeight(this.trainDataSet);
         this.trainWidth = widthAndHeight[0];
@@ -397,13 +405,13 @@ public class DT2 implements Runnable {
 
         this.X = ArrayTable.create(rowKeys, colKeys);
         this.Y = new ArrayList<>(this.trainHeight);
-        DT2.loadDataSet(this.trainDataSet, this.X, this.Y);
+        DT.loadDataSet(this.trainDataSet, this.X, this.Y);
 
         return this.X.rowKeyList();
     }
 
 
-    private List<Integer> loadTestDataSet(boolean ignoreWidth) throws IOException {
+    public List<Integer> loadTestDataSet(boolean ignoreWidth) throws IOException {
 
         int[] widthAndHeight = getWidthAndHeight(this.testDataSet);
         this.testWidth = widthAndHeight[0];
@@ -421,9 +429,9 @@ public class DT2 implements Runnable {
 
         this.Xtest = ArrayTable.create(rowKeys, colKeys);
         this.Ytest = new ArrayList<>(this.trainHeight);
-        DT2.loadDataSet(this.testDataSet, this.Xtest, this.Ytest);
+        DT.loadDataSet(this.testDataSet, this.Xtest, this.Ytest);
 
-        return this.Xtest.columnKeyList();
+        return this.Xtest.rowKeyList();
     }
 
     private static void loadDataSet(String fileName, ArrayTable<Integer, Integer, Float> table, List<Integer> labels) throws IOException {
@@ -471,6 +479,22 @@ public class DT2 implements Runnable {
         return testHeight;
     }
 
+    public ArrayTable<Integer, Integer, Float> getTrainDataSet() {
+        return this.X;
+    }
+
+    public List<Integer> getTrainLabels() {
+        return this.Y;
+    }
+
+    public ArrayTable<Integer, Integer, Float> getTestDataSet() {
+        return this.Xtest;
+    }
+
+    public List<Integer> getTestLabels() {
+        return this.Ytest;
+    }
+
     public static int[] getWidthAndHeight(String fileName) throws IOException {
 
         try(BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
@@ -488,19 +512,22 @@ public class DT2 implements Runnable {
         }
     }
 
-    private static class Node {
+    public static class Node {
+
+        private static Random random = new Random(System.currentTimeMillis());
+        private static final Gson gson = new Gson();
 
         private Double threshold;
-        private Integer attributeIdx;
+        private Integer feature;
         private Integer label;
         private Node left;
         private Node right;
         private Integer depth;
 
-        public Node(double threshold, int attributeIdx, Node left, Node right) {
-            //threshold + attributeIdx - internal node => no label
+        public Node(double threshold, int feature, Node left, Node right) {
+            //threshold + feature - internal node => no label
             this.threshold = threshold;
-            this.attributeIdx = attributeIdx;
+            this.feature = feature;
             this.left = left;
             this.right = right;
             this.label = null;
@@ -508,26 +535,58 @@ public class DT2 implements Runnable {
 
         public Node(int label) {
             this.label = label;
-            //if label is set this is a leaf - no threshold, attributeIdx and subtrees
+            //if label is set this is a leaf - no threshold, feature and subtrees
             this.threshold = null;
-            this.attributeIdx = null;
+            this.feature = null;
             this.left = null;
             this.right = null;
+        }
+
+        public double classifyTestDataSet(ArrayTable<Integer, Integer, Float> dataMatrix,
+                                          List<Integer> expectedLabels) {
+            return classifyTestDataSet(dataMatrix, expectedLabels, dataMatrix.rowKeyList());
+        }
+
+        public double classifyTestDataSet(ArrayTable<Integer, Integer, Float> dataMatrix,
+                                          List<Integer> expectedLabels,
+                                          List<Integer> testRowKeys) {
+            int total = 0;
+            int errors = 0;
+
+            for(Integer rowIdx : testRowKeys) {
+                Map<Integer, Float> row = dataMatrix.row(rowIdx);
+                Integer expected = expectedLabels.get(rowIdx);
+                int actual = classifyExample(row);
+
+                if(expected != actual) {
+                    errors++;
+                }
+                total++;
+            }
+
+            return (total - errors) / (1D * total);
         }
 
         public int classifyExample(Map<Integer, Float> example) {
 
             Node node = this;
 
-            while(node.attributeIdx != null) {
-                Float v = example.get(node.attributeIdx);
-                if(v <= node.threshold) {
-                    node = node.left;
+            while(node.feature != null) {
+                Float v = example.get(node.feature);
+                if(v != null) {
+                    if(v <= node.threshold) {
+                        node = node.left;
+                    }
+                    else {
+                        node = node.right;
+                    }
                 }
                 else {
-                    node = node.right;
+                    //example doesn't include this node's feature - flip a coin
+                    node = random.nextBoolean() ? node.left : node.right;
                 }
             }
+
             return node.label;
         }
 
@@ -563,9 +622,9 @@ public class DT2 implements Runnable {
 
         public String printNode() {
             StringBuilder sb = new StringBuilder();
-            if(attributeIdx != null) {
-                sb.append("(attr: ")
-                        .append(attributeIdx)
+            if(feature != null) {
+                sb.append("(feature: ")
+                        .append(feature)
                         .append(" ; threshold: ")
                         .append(threshold)
                         .append(")");
