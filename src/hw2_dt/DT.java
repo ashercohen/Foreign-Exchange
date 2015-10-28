@@ -11,18 +11,18 @@ import java.util.*;
  */
 public class DT implements Runnable {
 
-    private ArrayTable<Integer, Integer, Float> X;
-    private List<Integer> Y;
-    private ArrayTable<Integer, Integer, Float> Xtest;
-    private List<Integer> Ytest;
-    private String trainDataSet;
-    private String testDataSet;
-    private int trainWidth;
-    private int trainHeight;
-    private int testWidth;
-    private int testHeight;
+    protected ArrayTable<Integer, Integer, Float> X;
+    protected List<Integer> Y;
+    protected ArrayTable<Integer, Integer, Float> Xtest;
+    protected List<Integer> Ytest;
+    protected String trainDataSet;
+    protected String testDataSet;
+    protected int trainWidth;
+    protected int trainHeight;
+    protected int testWidth;
+    protected int testHeight;
     private Random random;
-    private int depth;
+    protected int depth;
 
 
     public DT(String trainDataSet, String testDataSet) {
@@ -77,6 +77,7 @@ public class DT implements Runnable {
 
     public Node learnDecisionTree(List<Integer> rowKeys, List<Integer> columns) throws IOException {
 
+//        System.out.println("learnDecisionTree(" + rowKeys.size() +")");
         if(checkIdenticalLabels(rowKeys)) {
             //return node predicting the label all rows have
             return new Node(this.Y.get(rowKeys.get(0)));
@@ -454,7 +455,7 @@ public class DT implements Runnable {
         }
     }
 
-    private List<Integer> getKeysAsList(int size) {
+    protected List<Integer> getKeysAsList(int size) {
         Integer[] keys = new Integer[size];
         for(int i = 0; i < size; i++) {
             keys[i] = i;
@@ -604,6 +605,10 @@ public class DT implements Runnable {
             }
         }
 
+        public String toJson() {
+            return gson.toJson(this);
+        }
+
         public static Node deserialize(String fileName) {
 
             try(BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
@@ -617,6 +622,10 @@ public class DT implements Runnable {
             }
 
             return null;
+        }
+
+        public static Node deserializeFromJson(String json) {
+            return gson.fromJson(json, Node.class);
         }
 
 
