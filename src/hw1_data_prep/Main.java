@@ -26,7 +26,7 @@ public class Main implements Runnable {
      * hw1_data_prep.Main class of the data preparation assignment where the flow is defined
      */
     //currency pairs used for prediction (features are generated from these)
-    private static final Currencies[] CURRENCIES = new Currencies[]{
+    public static final Currencies[] CURRENCIES = new Currencies[]{
             Currencies.EURGBP,
             Currencies.EURJPY,
             Currencies.GBPUSD,
