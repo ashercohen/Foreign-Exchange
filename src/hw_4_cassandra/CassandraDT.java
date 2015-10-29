@@ -20,6 +20,11 @@ import java.util.List;
  */
 public class CassandraDT extends DT implements Runnable {
 
+    private static final String METRICS_TABLE = "metrics";
+    private static final String TREES_TABLE = "trees";
+    private static final String TEST_TABLE = "test";
+    private static final String TRAIN_TABLE = "train";
+
     private String hostIP;
     private String keySpace;
     private String trainTable;
@@ -30,16 +35,17 @@ public class CassandraDT extends DT implements Runnable {
 //    private String testDataSet;
     private String mode;
 
+
     public CassandraDT(String mode, String hostIP, String keySpace, String trainDataSet, String testDataSet) {
 
         super(trainDataSet, testDataSet);
         this.hostIP = hostIP;
         this.keySpace = keySpace;
         this.mode = mode;
-        this.trainTable = "train";
-        this.testTable = "test";
-        this.treesTable = "trees";
-        this.metricsTable = "metrics";
+        this.trainTable = TRAIN_TABLE;
+        this.testTable = TEST_TABLE;
+        this.treesTable = TREES_TABLE;
+        this.metricsTable = METRICS_TABLE;
     }
 
     public static void main(String[] args) {
@@ -116,30 +122,43 @@ public class CassandraDT extends DT implements Runnable {
     }
 
     private void saveMetricToDB(double accuracy, Session session) {
-
         String treeName = this.trainDataSet.replace(".txt", "_tree");
+        insertToMetricsTable(treeName, accuracy, session);
+    }
+
+    public void insertToMetricsTable(String name, double value, Session session) {
         String insertValueCQL = "INSERT INTO %s.%s (name, accuracy) VALUES ('%s', %f)";
-        session.execute(String.format(insertValueCQL, this.keySpace, this.metricsTable, treeName, accuracy));
+        session.execute(String.format(insertValueCQL, this.keySpace, this.metricsTable, name, value));
     }
 
     private void saveTreeToDB(Node tree, Session session) {
-
         String treeName = this.trainDataSet.replace(".txt", "_tree");
+        insertToTreesTable(treeName, tree.toJson(), session);
+    }
+
+    public void insertToTreesTable(String name, String json, Session session) {
         String insertTreeCQL = "INSERT INTO %s.%s (name, json) VALUES ('%s', '%s')";
-        session.execute(String.format(insertTreeCQL, this.keySpace, this.treesTable, treeName, tree.toJson()));
+        session.execute(String.format(insertTreeCQL, this.keySpace, this.treesTable, name, json));
     }
 
     private Node loadTreeFromDB(Session session) {
-
         String treeName = this.trainDataSet.replace(".txt", "_tree");
+        String json = selectFromTreesTable(treeName, session);
+        if(json == null) {
+            return null;
+        }
+        return Node.deserializeFromJson(json);
+    }
+
+    public String selectFromTreesTable(String name, Session session) {
+
         String getTreeCQL = "SELECT json FROM %s.%s WHERE name = '%s'";
-        ResultSet rows = session.execute(String.format(getTreeCQL, this.keySpace, this.treesTable, treeName));
+        ResultSet rows = session.execute(String.format(getTreeCQL, this.keySpace, this.treesTable, name));
         Row one = rows.one();
         if(one == null) {
             return null;
         }
-
-        return Node.deserializeFromJson(one.getString(0));
+        return one.getString(0);
     }
 
     public List<Integer> loadTrainDataSet(Session session) throws IOException {
@@ -216,7 +235,7 @@ public class CassandraDT extends DT implements Runnable {
         return new int[]{width, height};
     }
 
-    private void createKeySpaceAndTables(Session session) {
+    void createKeySpaceAndTables(Session session) {
 
         /*
          * create KeySpace
@@ -281,11 +300,11 @@ public class CassandraDT extends DT implements Runnable {
         return columns;
     }
 
-    private void loadTrainDataToCassandra(Session session) {
+    void loadTrainDataToCassandra(Session session) {
         loadDataToCassandra(session, this.trainDataSet, this.trainTable);
     }
 
-    private void loadTestDataToCassandra(Session session) {
+    void loadTestDataToCassandra(Session session) {
         loadDataToCassandra(session, this.testDataSet, this.testTable);
     }
 

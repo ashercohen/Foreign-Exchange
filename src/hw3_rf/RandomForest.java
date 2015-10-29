@@ -13,13 +13,13 @@ import java.util.*;
 public class RandomForest implements Runnable {
 
     private static final Gson gson = new Gson();
-    private static final String FOREST_FILE_NAME = "hw3_RF.json";
+    protected static final String FOREST_FILE_NAME = "RF.json";
 
-    private int N;
-    private String trainDataSet;
-    private String testDataSet;
-    private int featureCount;
-//    private int exampleCount;
+    protected int N;
+    protected String trainDataSet;
+    protected String testDataSet;
+    protected int featureCount;
+    //    private int exampleCount;
     private Random random;
 
     public RandomForest(int n, String trainDataSet, String testDataSet) {
@@ -73,16 +73,16 @@ public class RandomForest implements Runnable {
 
                 //test forest accuracy on remaining 1/3 of train data
                 double forest_accuracy = testRandomForest(forest, testRows, trainDataSet, trainLabels);
-                System.out.println(String.format("forest accuracy using %d trees = %f", t+1, forest_accuracy));
+                System.out.println(String.format("forest accuracy using %d trees = %f", t + 1, forest_accuracy));
             }
 
             forest.persistToFile(FOREST_FILE_NAME);
 
             //finally test forest on 20% of held out dataset
             double forestAccuracy = testRandomForest(forest,
-                                                     dt.loadTestDataSet(true),
-                                                     dt.getTestDataSet(),
-                                                     dt.getTestLabels());
+                    dt.loadTestDataSet(true),
+                    dt.getTestDataSet(),
+                    dt.getTestLabels());
             System.out.println("random forest accuracy = " + forestAccuracy);
 
         }
@@ -94,7 +94,7 @@ public class RandomForest implements Runnable {
         System.out.println("total runtime (sec): " + (finish - start) / 1000);
     }
 
-    private double testRandomForest(Forest forest,
+    protected double testRandomForest(Forest forest,
                                     List<Integer> exampleKeys,
                                     ArrayTable<Integer, Integer, Float> testDataSet,
                                     List<Integer> testLabels) {
@@ -151,7 +151,7 @@ public class RandomForest implements Runnable {
     /**
      * randomly split the indexes given in argument into 2/3 and 1/3
      */
-    private List<Integer>[] splitDataSetRandomly(Set<Integer> rowKeysSet) {
+    protected List<Integer>[] splitDataSetRandomly(Set<Integer> rowKeysSet) {
 
         int totalRows = rowKeysSet.size();
         int numRows = totalRows * 2 / 3;
@@ -170,7 +170,7 @@ public class RandomForest implements Runnable {
         return rv;
     }
 
-    private List<Integer> randomFeaturesSubSet(List<Integer> features) {
+    protected List<Integer> randomFeaturesSubSet(List<Integer> features) {
 
         int featuresCount = features.size();
         int size = (int)Math.sqrt(featuresCount);
@@ -183,7 +183,7 @@ public class RandomForest implements Runnable {
         return new ArrayList<>(subset);
     }
 
-    private List<Integer> getKeysAsList(int size) {
+    protected List<Integer> getKeysAsList(int size) {
         Integer[] keys = new Integer[size];
         for(int i = 0; i < size; i++) {
             keys[i] = i;
@@ -192,7 +192,7 @@ public class RandomForest implements Runnable {
         return Arrays.asList(keys);
     }
 
-    private static class Forest {
+    public static class Forest {
 
         private int size;
         private ArrayList<DT.Node> forest;
@@ -204,6 +204,10 @@ public class RandomForest implements Runnable {
 
         public void add(DT.Node tree) {
             this.forest.add(tree);
+        }
+
+        public String toJson() {
+            return gson.toJson(this);
         }
 
         public void persistToFile(String fileName) {
