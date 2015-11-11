@@ -197,6 +197,10 @@ public class RandomForest implements Runnable {
         private int size;
         private ArrayList<DT.Node> forest;
 
+        public Forest() {
+            this.forest = new ArrayList<>();
+        }
+
         public Forest(int size) {
             this.size = size;
             this.forest = new ArrayList<>(size);

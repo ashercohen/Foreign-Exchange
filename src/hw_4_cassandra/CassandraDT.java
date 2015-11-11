@@ -35,6 +35,9 @@ public class CassandraDT extends DT implements Runnable {
 //    private String testDataSet;
     private String mode;
 
+    public CassandraDT(String trainDataSet, String testDataSet) {
+        super(trainDataSet, testDataSet);
+    }
 
     public CassandraDT(String mode, String hostIP, String keySpace, String trainDataSet, String testDataSet) {
 
@@ -284,7 +287,7 @@ public class CassandraDT extends DT implements Runnable {
         session.execute(String.format(createMetricsTableCQL, this.keySpace, this.metricsTable));
     }
 
-    private List<String> getColumns() {
+    public static List<String> getColumns() {
 
         Fields fields = FeaturesGeneratorBuffer.generateFieldsByCurrencies(Arrays.asList(Main.CURRENCIES));
         List<String> columns = new ArrayList<>(fields.size());
