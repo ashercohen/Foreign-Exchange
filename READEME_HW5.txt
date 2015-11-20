@@ -1,0 +1,15 @@
+11676 Big Data Analytics - Assignment #5 - Random Forest in MapReduce
+=====================================================================
+
+Asher Cohen asherc@cs.cmu.edu
+
+Files:
+------
+- RandomForestMR.java - mapreduce driver class
+- CassandraMapper.java - mapper class
+- CassandraReducer.java - reducer class
+
+Files from previous assignments that were modified:
+- CassandraDT.java - Added constructor and expose a method to be public
+- RandomForest.java - Added constructor where size of forest is unknown
+
